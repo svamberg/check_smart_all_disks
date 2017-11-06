@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#
+# https://github.com/svamberg/check_smart_all_disks
+#
+
+
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
 DEBUG=0
 OPTIONS=$@
@@ -36,7 +41,7 @@ check_disk() {
 # megaraid
 device_megaraid() {
 	device=$1
-	for i in `megaclisas-status  | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}'`; do
+	for i in `sudo /usr/sbin/megaclisas-status  | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}'`; do
 		check_disk $1 megaraid $i
 	done
 
@@ -70,7 +75,7 @@ while read i; do
 			;;
 	esac
 
-done <<< `hwinfo --disk | grep -E 'Device File:|Driver:' | awk 'NR%2{printf "%s =",$0;next;}1' | sed -r 's/\(.*\)//g' | sed -r 's/"//g' | awk -F ':|=' '{print $4":"$2}'`
+done <<< `/usr/sbin/hwinfo --disk | grep -E 'Device File:|Driver:' | awk 'NR%2{printf "%s =",$0;next;}1' | sed -r 's/\(.*\)//g' | sed -r 's/"//g' | awk -F ':|=' '{print $4":"$2}'`
 
 # printing output
 
