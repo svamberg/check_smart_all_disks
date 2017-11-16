@@ -38,7 +38,11 @@ check_disk() {
 
 	perf=`echo "$out" | awk -F '|' '{print $2}' | awk 'BEGIN {ORS=" "}{for (fn=1;fn<=NF;fn++) {print "'$shortdev':"$fn}}'`
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: performance line: $perf"
-	PERFORMANCE="$PERFORMANCE $perf"
+	if [ -z "$PERFORMANCE" ] ; then
+		PERFORMANCE="$perf"
+	else
+		PERFORMANCE="$PERFORMANCE$perf"
+	fi
 	
 	info=`echo "$out" | awk -F '|' '{print $1}'`
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: info line: $shortdev $info"
