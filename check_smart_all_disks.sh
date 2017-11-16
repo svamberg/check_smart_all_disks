@@ -16,25 +16,37 @@ echoerr() { echo "$@" 1>&2; }
 
 check_disk() {
 	device=$1
-	subdisk=$3		
+	subdisk=$3
 	interface=$2
-	shortdev=`awk -F '/' '{print $NF"_'$subdisk'"}' <<< $1`
+	if [ -z "$subdisk" ] ; then
+		shortdev=`awk -F '/' '{print $NF}' <<< $1`
+		smartcmd="$SMARTCHECK -i $interface -d $device $OPTIONS"
+	else
+		shortdev=`awk -F '/' '{print $NF"-'$subdisk'"}' <<< $1`
+		smartcmd="$SMARTCHECK -i $interface,$subdisk -d $device $OPTIONS"
+	fi
 
-	out=`$SMARTCHECK -i $interface,$subdisk -d $device $OPTIONS`
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: run smart: $smartcmd"
+	out=`$smartcmd`
 	ret=$?
+
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: return value for $device on interface $interface,$subdisk is $ret"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: return line: $out"
 	
 	[ "$ret" -gt "$NAG_RETURN" ] && NAG_RETURN=$ret
 
 
-	perf=`echo "$out" | awk -F '|' '{print $2}' | awk 'BEGIN {ORS=" "}{for (fn=1;fn<=NF;fn++) {print "'$shortdev'_"$fn}}'`
-	[ $DEBUG -ne 0 ] && echoerr "DEGUG: performance line: $perf"
+	perf=`echo "$out" | awk -F '|' '{print $2}' | awk 'BEGIN {ORS=" "}{for (fn=1;fn<=NF;fn++) {print "'$shortdev':"$fn}}'`
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: performance line: $perf"
 	PERFORMANCE="$PERFORMANCE $perf"
 	
 	info=`echo "$out" | awk -F '|' '{print $1}'`
-	[ $DEBUG -ne 0 ] && echoerr "DEGUG: info line: $shortdev $info"
-	OUTPUT=`echo -e "$OUTPUT\n$shortdev $info"`
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: info line: $shortdev $info"
+	if [ -z "$OUTPUT" ]; then
+		OUTPUT=`echo -e "$shortdev $info"`
+	else
+		OUTPUT=`echo -e "$OUTPUT\n$shortdev $info"`
+	fi
 		
 }
 
@@ -50,11 +62,12 @@ device_megaraid() {
 # ---------------------------------------------------------------------
 
 megaraid_run=0
-while read i; do
+while IFS= read i; do
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: input line: $i"
-	device=${i%% *} # first word
+	device=`awk -F ':' '{print $1}' <<< $i`
 	drivers=`awk -F ':' '{print $2}' <<< $i`
 	
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: device: $device"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: drivers: $drivers"
 	case "$drivers" in
 		*megaraid*)
@@ -67,6 +80,14 @@ while read i; do
 		*ahci*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci"
 			check_disk $device sat
+			;;
+		*qla2xxx*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is fibrechannel"
+			# preskakujeme, na FC nema smysl kontrolovat SMART
+			;;
+		*mptsas*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas"
+			check_disk $device scsi
 			;;
 		*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is UNKNOWN"
