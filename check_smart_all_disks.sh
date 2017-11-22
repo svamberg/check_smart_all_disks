@@ -93,6 +93,9 @@ while IFS= read i; do
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas"
 			check_disk $device scsi
 			;;
+		*usb-storage*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is usb-storage (skip)"
+			;;
 		*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is UNKNOWN"
 			echo "$device: unknown drivers: '$driver'"
