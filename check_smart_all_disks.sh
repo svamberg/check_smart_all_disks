@@ -66,7 +66,7 @@ device_megaraid() {
 # ---------------------------------------------------------------------
 
 megaraid_run=0
-while IFS= read i; do
+while IFS='#' read -d '#' -r i; do
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: input line: $i"
 	device=`awk -F ':' '{print $1}' <<< $i`
 	drivers=`awk -F ':' '{print $2}' <<< $i`
@@ -107,7 +107,7 @@ while IFS= read i; do
 			;;
 	esac
 
-done <<< `/usr/sbin/hwinfo --disk | grep -E 'Device File:|Driver:' | awk 'NR%2{printf "%s =",$0;next;}1' | sed -r 's/\(.*\)//g' | sed -r 's/"//g' | awk -F ':|=' '{print $4":"$2}'`
+done <<< `/usr/sbin/hwinfo --disk | grep -E 'Device File:|Driver:' | awk 'NR%2{printf "%s =",$0;next;}1' | sed -r 's/\(.*\)//g' | sed -r 's/"//g' | awk -F ':|=' '{print $4":"$2}' | tr '\n' '#'`
 
 # printing output
 
