@@ -102,7 +102,7 @@ while IFS= read i; do
 			;;
 		*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is UNKNOWN"
-			echo "$device: unknown drivers: '$driver'"
+			echo "$device has unknown drivers: $drivers"
 			NAG_RETURN=4
 			;;
 	esac
