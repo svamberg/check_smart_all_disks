@@ -26,7 +26,7 @@ cat > /etc/sudoers.d/check_smart <EOF
 nagios ALL=(root) NOPASSWD: /usr/sbin/megaclisas-status
 nagios ALL=(root) NOPASSWD: /usr/sbin/smartctl
 EOF 
-chmod 0440 nagios ALL=(root) NOPASSWD: /usr/sbin/smartctl`
+chmod 0440 /etc/sudoers.d/check_smart`
 ```
   
 ## Usage
