@@ -89,6 +89,10 @@ while IFS= read i; do
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is fibrechannel"
 			# preskakujeme, na FC nema smysl kontrolovat SMART
 			;;
+		*mpt3sas*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas"
+			check_disk $device scsi
+			;;
 		*mptsas*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas"
 			check_disk $device scsi
