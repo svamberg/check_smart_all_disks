@@ -75,30 +75,35 @@ while IFS='#' read -d '#' -r i; do
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: drivers: $drivers"
 	case "$drivers" in
 		*megaraid*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid"
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid (test all connected devices)"
 			if [ $megaraid_run -eq 0 ] ; then
 				device_megaraid $device
 				megaraid_run=1
 			fi
 			;;
 		*ahci*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci"
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci (sat)"
 			check_disk $device sat
 			;;
 		*qla2xxx*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is fibrechannel"
-			# preskakujeme, na FC nema smysl kontrolovat SMART
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is fibrechannel (skipping)"
+			# skipping - smart is not exists on this device
+			;;
+		*mmcblk*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mmcblk (skipping)"
+			# skipping - smart is not exists on this device
 			;;
 		*mpt3sas*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas"
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas (scsi)"
 			check_disk $device scsi
 			;;
 		*mptsas*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas"
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas (scsi)"
 			check_disk $device scsi
 			;;
 		*usb-storage*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is usb-storage (skip)"
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is usb-storage (skipping)"
+			# skipping - smart is not exists on this device
 			;;
 		*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is UNKNOWN"
