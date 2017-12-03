@@ -57,7 +57,7 @@ check_disk() {
 # megaraid
 device_megaraid() {
 	device=$1
-	for i in `sudo /usr/sbin/megaclisas-status  | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}'`; do
+	for i in `sudo /usr/sbin/megaclisas-status  | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}' | grep -v 'Unknown'`; do
 		check_disk $1 megaraid $i
 	done
 
