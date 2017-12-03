@@ -111,8 +111,10 @@ while IFS='#' read -d '#' -r i; do
 			NAG_RETURN=4
 			;;
 	esac
-
-done <<< `/usr/sbin/hwinfo --disk | grep -E 'Device File:|Driver:' | awk 'NR%2{printf "%s =",$0;next;}1' | sed -r 's/\(.*\)//g' | sed -r 's/"//g' | awk -F ':|=' '{print $4":"$2}' | tr '\n' '#'`
+# output format: device_name1 : driver1[,driver2[,driver3[, ...]]] # [... : ... #]
+#       example: /dev/sdf : qla2xxx,sd # /dev/sdd : qla2xxx,sd # /dev/sdb : qla2xxx,sd # /dev/sdk : mptsas,sd #
+#done <<< `/usr/sbin/hwinfo --disk | grep -E 'Device File:|Driver:' | awk 'NR%2{printf "%s =",$0;next;}1' | sed -r 's/\(.*\)//g' | sed -r 's/"//g' | awk -F ':|=' '{print $4":"$2}' | tr '\n' '#'`
+done <<< `for i in \`lsblk -o KNAME,TYPE | grep disk | cut -d' ' -f 1\` ; do echo -n "/dev/$i : " ; udevadm info -a -n /dev/$i | grep -oP 'DRIVERS?=="\K[^"]+' | tr '\n' ',' ; echo -n ' # '  ;done`
 
 # printing output
 

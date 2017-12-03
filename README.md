@@ -1,11 +1,14 @@
 # check_smart_all_disks.sh
 
 ## Requirements
+Needs `blkid`, `udevadm`, `sudo`, `smartctl`, `grep`, `bash` and `awk`.
 
 Debian:
-`apt-get install hwinfo`
+`apt-get install util-linux udev sudo smartmontools grep bash awk`
 
-### Only if you used megaraid controller
+### If you used megaraid controller
+You need also megaraid tools `megacli` and `megaclisas-status`.
+
 Debian:
 Set APT sources list by http://hwraid.le-vert.net/wiki/DebianPackages
 ```
