@@ -85,6 +85,18 @@ while IFS='#' read -d '#' -r i; do
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci (sat)"
 			check_disk $device sat
 			;;
+		*aic7xxx*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is aic7xxx (scsi)"
+			check_disk $device scsi
+			;;
+		*ata_piix*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ata_piix (sat)"
+			check_disk $device sat
+			;;
+		*floppy*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is floppy (skipping)"
+			# skipping - this device has not SMART
+			;;
 		*qla2xxx*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is fibrechannel (skipping)"
 			# skipping - smart is not exists on this device
@@ -93,12 +105,16 @@ while IFS='#' read -d '#' -r i; do
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mmcblk (skipping)"
 			# skipping - smart is not exists on this device
 			;;
-		*mpt3sas*)
-			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas (scsi)"
-			check_disk $device scsi
-			;;
 		*mptsas*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas (scsi)"
+			check_disk $device scsi
+			;;
+		*mpt2sas*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt2sas (scsi)"
+			check_disk $device scsi
+			;;
+		*mpt3sas*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas (scsi)"
 			check_disk $device scsi
 			;;
 		*usb-storage*)
