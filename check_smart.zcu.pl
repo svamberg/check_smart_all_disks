@@ -168,7 +168,7 @@ if (($interface =~ /^megaraid,\d+$/) or ($interface eq 'scsi')){
 }
 
 foreach my $line (@output){
-        if ($line =~ /Device open changed type from 'megaraid' to 'sat'/) {
+        if ($line =~ /Device open changed type from 'megaraid(,\d+)?' to 'sat(\+megaraid(,\d+)?)?'/) {
                 $line_str = 'SMART overall-health self-assessment test result: '; # ATA SMART line
                 $ok_str = 'PASSED'; # ATA SMART OK string
                 $output_as_sat = 1;
