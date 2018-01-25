@@ -157,31 +157,24 @@ warn "(debug) output:\n@output\n\n" if $opt_debug;
 
 # parse ata output, looking for "health status: passed"
 my $found_status = 0;
-my $line_str = 'SMART overall-health self-assessment test result: '; # ATA SMART line
-my $ok_str = 'PASSED'; # ATA SMART OK string
+my $value_status = '';
+my $line_str = 'SMART (overall-)?[Hh]ealth (self-assessment test result|Status): '; # ATA SMART line
+my $ok_str = '(PASSED|OK)'; # ATA SMART OK string
 my $output_as_sat = 0;
 
 if (!defined($number)) { $number = 0; }
-if (($interface =~ /^megaraid,\d+$/) or ($interface eq 'scsi')){
-	$line_str = 'SMART Health Status: '; # SCSI OR MEGARAID SMART line
-	$ok_str = 'OK'; #SCSI OR MEGARAID SMART OK string
-}
 
 foreach my $line (@output){
-        if ($line =~ /Device open changed type from 'megaraid(,\d+)?' to 'sat(\+megaraid(,\d+)?)?'/) {
-                $line_str = 'SMART overall-health self-assessment test result: '; # ATA SMART line
-                $ok_str = 'PASSED'; # ATA SMART OK string
-                $output_as_sat = 1;
-        }
 	if($line =~ /$line_str(.+)/){
 		$found_status = 1;
+		$value_status = $3;
 		warn "(debug) parsing line:\n$line\n\n" if $opt_debug;
-		if ($1 eq $ok_str) {
-			warn "(debug) found string '$ok_str'; status OK\n\n" if $opt_debug;
+		if ($value_status =~ /$ok_str/) {
+			warn "(debug) found string '$ok_str'; status $1\n\n" if $opt_debug;
 		}
 		else {
 			warn "(debug) no '$ok_str' status; failing\n\n" if $opt_debug;
-			push(@error_messages, "Health status: $1");
+			push(@error_messages, "Health status: $value_status");
 			escalate_status('CRITICAL');
 		}
 	}
@@ -264,13 +257,14 @@ warn "(debug) output:\n@output\n\n" if $opt_debug;
 my @perfdata = qw//;
 
 # separate metric-gathering and output analysis for ATA vs SCSI SMART output
-if (($interface eq 'ata') or ($interface =~ /sat.*/) or $output_as_sat){
+#if (($interface eq 'ata') or ($interface =~ /sat.*/) or $output_as_sat){
 	foreach my $line(@output){
 		# get lines that look like this:
 		#    9 Power_On_Minutes        0x0032   241   241   000    Old_age   Always       -       113h+12m
 		#    5 Reallocated_Sector_Ct   0x0033   100   100   036    Pre-fail  Always       -       16
 		next unless $line =~ /^\s*\d+\s(\S+)\s+(?:\S+\s+){6}(\S+)\s+(\d+)/;
 		my ($attribute_name, $when_failed, $raw_value) = ($1, $2, $3);
+
 		if ($when_failed ne '-'){
 			push(@error_messages, "Attribute $attribute_name failed at $when_failed");
 			escalate_status('WARNING') if !$opt_failure;
@@ -295,8 +289,8 @@ if (($interface eq 'ata') or ($interface =~ /sat.*/) or $output_as_sat){
 		}
 	
 	}
-}
-else{
+#}
+#else{
 	my ($current_temperature, $max_temperature, $current_start_stop, $max_start_stop) = qw//;
 	foreach my $line(@output){
 		if ($line =~ /Current Drive Temperature:\s+(\d+)/){
@@ -344,7 +338,8 @@ else{
 			push (@perfdata, "start_stop=$current_start_stop");
 		}
 	}
-}
+#}
+
 warn "(debug) gathered perfdata:\n@perfdata\n\n" if $opt_debug;
 my $perf_string = join(' ', @perfdata);
 
