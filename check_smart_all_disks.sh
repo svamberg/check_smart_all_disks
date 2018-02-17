@@ -6,7 +6,7 @@
 
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
-DEBUG=1
+DEBUG=0
 OPTIONS=$@
 NAG_RETURN=0 # default OK
 OUTPUT=""
@@ -57,17 +57,28 @@ check_disk() {
 # megaraid
 device_megaraid() {
 	device=$1
+	shortdev=`awk -F '/' '{print $NF}' <<< $device`
 	serial=`lsblk --nodeps -o serial -n $device`
 	status=`sudo /usr/sbin/megaclisas-status`
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: serial on $device: $serial"
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: status on $device: $status"
 
-	if grep -q "$serial" <<< $status ; then 
-		for i in `echo $status | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}' | grep -v 'Unknown'`; do
+	# at first check megaraid devices	
+	if egrep -q "^$shortdev(-\\d+)? OK" <<< $OUTPUT ; then
+		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
+	else
+		for i in `echo "$status" | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}' | grep -v 'Unknown'`; do
 			check_disk $device megaraid $i
 		done
+	fi
+
+	#if this device is JBOD (not found in OUTPUT again)
+	if egrep -q "^$shortdev(-\\d+)? OK" <<< $OUTPUT ; then
+		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
 	else
-		# this device is JBOD
 		check_disk $device scsi
 	fi
+
 }
 
 # ---------------------------------------------------------------------
@@ -76,19 +87,13 @@ while IFS='#' read -d '#' -r i; do
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: input line: $i"
 	device=`awk -F ':' '{print $1}' <<< $i`
 	drivers=`awk -F ':' '{print $2}' <<< $i`
-	shortdev=`awk -F '/' '{print $NF}' <<< $device`
 	
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: device: $device"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: drivers: $drivers"
 	case "$drivers" in
 		*megaraid*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid (test all connected devices)"
-			if egrep -q "^$shortdev(,\\d+)? OK" <<< $OUTPUT ; then
-				[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
-			else
-				# this device is not checked,  
-				device_megaraid $device
-			fi
+			device_megaraid $device
 			;;
 		*ahci*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci (sat)"
