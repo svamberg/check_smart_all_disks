@@ -63,17 +63,18 @@ device_megaraid() {
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: serial on $device: $serial"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: status on $device: $status"
 
-	# at first check megaraid devices	
-	if egrep -q "^$shortdev(-\\d+)? OK" <<< $OUTPUT ; then
+	# at first check megaraid devices
+	echo "$OUTPUT" | grep -q -P "^$shortdev(-\\d+)?\s+"
+	if [ $? -eq 0 ]; then
 		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
 	else
 		for i in `echo "$status" | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}' | grep -v 'Unknown'`; do
 			check_disk $device megaraid $i
 		done
 	fi
-
 	#if this device is JBOD (not found in OUTPUT again)
-	if egrep -q "^$shortdev(-\\d+)? OK" <<< $OUTPUT ; then
+	echo "$OUTPUT" | grep -q -P "^$shortdev(-\\d+)?\s+"
+	if [ $? -eq 0 ] ; then
 		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
 	else
 		check_disk $device scsi
