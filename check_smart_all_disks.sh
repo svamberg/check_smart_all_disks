@@ -77,7 +77,13 @@ device_megaraid() {
 	if [ $? -eq 0 ] ; then
 		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
 	else
-		check_disk $device scsi
+		# SAT or SAS ?
+		smartctl -i $device | grep -q 'SATA'
+		if [ $? -eq 0 ] ; then
+			check_disk $device sat
+		else
+			check_disk $device scsi
+		fi
 	fi
 
 }
