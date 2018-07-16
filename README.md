@@ -36,8 +36,8 @@ chmod 0440 /etc/sudoers.d/check_smart`
 Use as plugin in Icinga/Nagios and call as nagios user (or change sudo):
 `/usr/local/lib/nagios/plugins/check_smart_all_disks.sh`
 
-You can pass aditional option to check_smart.zcu.pl,
-please use -h option for full help and examples.
+You can pass aditional option to `check_smart.zcu.pl`,
+please use `-h` option for full help and examples.
 
 ## Examples
 On megaraid device /dev/sdd with RAID5 from 4 disks:
