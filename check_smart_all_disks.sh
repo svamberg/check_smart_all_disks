@@ -6,24 +6,87 @@
 
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
-DEBUG=0
-OPTIONS=$@
+DEBUG=1
+#OPTIONS=$@
 NAG_RETURN=0 # default OK
 OUTPUT=""
 PERFORMANCE=""
 
 echoerr() { echo "$@" 1>&2; }
 
+
+# ---------------------------------------------------------------------
+format_options() {
+	in=$1
+	out=""
+
+#	echo "DEBUG in=$in" >&2
+	while IFS='#' read -d '#' -r i; do
+#		echo "DEBUG: i=$i" >&2
+		case $i in
+			[di]:*|"")
+				# matchs or empty options => skips	
+				;;
+			[rp]:*)
+				# formating options with arguments
+				i_tr=$(echo "$i" | tr ':' ' ');
+				out="$out -$i_tr"
+				;;
+			[clf])
+				# formating options without arguments
+				out="$out -$i"
+				;;
+			*)
+				echo "Unknown format of option -o with value '$1'." >&2
+				exit 3
+				;;
+		esac
+	done <<< $in
+	echo $out 
+}
+
+parse_option() {
+	device=$1
+	subdisk=$3
+	interface=$2
+	smart_opts=""
+	
+	for i in ${opt_o[*]}; do
+		#echo "DEBUG: $i - $device - $interface - $subdisk" >&2
+		#  d:device && (i:interface || i:interface,subdisk)
+		if [[ $i =~ "#d:${device}#" ]] && { [[ $i =~ "#i:${interface}#" ]] || [[ $i =~ "#i:${interface},${subdisk}#" ]] ; } ; then
+			smart_opts="${smart_opts} $(format_options ${i})"
+		fi
+		# d:device (not defined interface)
+		if [[ $i =~ "#d:${device}#" ]] && [[ ! $i =~ "#i:.*#" ]] ; then
+			smart_opts="${smart_opts} $(format_options ${i})"
+		fi
+		# i:interface (not defined device)
+		if [[ ! $i =~ "#d:.*#" ]] && { [[ $i =~ "#i:${interface}#" ]] || [[ $i =~ "#i:${interface},${subdisk}#" ]] ; } ; then
+			smart_opts="${smart_opts} $(format_options ${i})"
+		fi
+	done
+
+	# return string as options to smartctl
+	echo $smart_opts
+}
+
+
 check_disk() {
 	device=$1
 	subdisk=$3
 	interface=$2
+
+	# get parameters from option -o
+	args=$( parse_option $device $interface $subdisk )
+	#echo -e "DEBUG: return \n$args"
+
 	if [ -z "$subdisk" ] ; then
 		shortdev=`awk -F '/' '{print $NF}' <<< $1`
-		smartcmd="$SMARTCHECK -i $interface -d $device $OPTIONS"
+		smartcmd="$SMARTCHECK -i $interface -d $device $args"
 	else
 		shortdev=`awk -F '/' '{print $NF"-'$subdisk'"}' <<< $1`
-		smartcmd="$SMARTCHECK -i $interface,$subdisk -d $device $OPTIONS"
+		smartcmd="$SMARTCHECK -i $interface,$subdisk -d $device $args"
 	fi
 
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: run smart: $smartcmd"
@@ -87,6 +150,44 @@ device_megaraid() {
 	fi
 
 }
+
+# usage
+usage() {
+	echo "$0 [-h] [-o 'device_options' [-o 'device_options']]"
+	echo "  -h ... help"
+	echo "  -o devices_option ... set specific device values"
+	echo "     devices_option = <opt_char>:<value>[#<opt_char>:<value>[#...]]"
+	echo "       opt_char: option from check_smart.zcu.pl"
+        echo "       value:    value for option from check_smart.zcu.pl"
+	echo "Notes:"
+	echo "       Match options 'd' and 'i' control what disk mean for value settings."
+        echo "       When using 'd:/dev/sda' (without 'i' option) then values matching to"
+        echo "       to all disks mapped on /dev/sda (megaraid,0 ; megaraid,1 ; ...)"
+	echo "Examples:"
+	echo "  $0 -o 'd:/dev/sda#i:megaraid,2#r:4"
+	echo "     sets minimum reallocated sectors to 4 on megaraid device /dev/sda at disk 2"
+	echo "  $0 -o 'd:/dev/sdb#l#p:3"
+	echo "     disable checking log and sets minimum pending sectors to 3 at device /dev/sdb"
+	echo "  $0 -o 'd:/dev/sdc#c' -o 'd:/dev/sdd#f'"
+	echo "     disabling checksum on /dev/sdc and disabling check of failure on /dev/sdd"
+	echo "  $0 -o 'd:/dev/sdd#l' -o 'd:/dev/sdd#i:megaraid,2#c'"
+	echo "     disabling logs on all disks at /dev/sdd plus disable checksum on megaraid,2 disk"
+}
+
+# --- read options ----------------------------------------------------
+opt_o=()
+while getopts "h:o:" opt; do
+  case $opt in
+    o)
+	opt_o+=("#$OPTARG#")
+      ;;
+    h)
+	echo "-h was triggered $OPTARG" >&2
+	usage
+	exit 0
+      ;;
+  esac
+done
 
 # ---------------------------------------------------------------------
 
