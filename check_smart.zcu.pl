@@ -387,7 +387,7 @@ sub print_help {
         print "  -p/--pending    minimum of accepted pending sectors (actual value: $opt_pending)\n";
 	print "  -c/--checksum   disable checksum log structure (default: enable)\n";
 	print "  -l/--log        disable check of SMART logs (default: enable)\n";
-	print "  -f/--failure    disable warning when disk may be close to failure)\n";
+	print "  -f/--failure    disable warning when disk may be close to failure\n";
 	print "     --debug      show debugging information\n";
 	print "  -h/--help       this help\n";
 	print "  -v/--version    show version of this plugin\n";
