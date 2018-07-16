@@ -25,7 +25,7 @@ cp /tmp/check_smart_all_disks/check* /usr/local/lib/nagios/plugins/
 
 ## Setup
 ```
-cat > /etc/sudoers.d/check_smart <EOF
+cat <<EOF > /etc/sudoers.d/check_smart
 nagios ALL=(root) NOPASSWD: /usr/sbin/megaclisas-status
 nagios ALL=(root) NOPASSWD: /usr/sbin/smartctl
 EOF 
