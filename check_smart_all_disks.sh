@@ -6,8 +6,8 @@
 
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
-DEBUG=1
-#OPTIONS=$@
+#SMARTCHECK=./check_smart.zcu.pl
+DEBUG=0
 NAG_RETURN=0 # default OK
 OUTPUT=""
 PERFORMANCE=""
@@ -127,16 +127,21 @@ device_megaraid() {
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: status on $device: $status"
 
 	# at first check megaraid devices
-	echo "$OUTPUT" | grep -q -P "^$shortdev(-\\d+)?\s+"
+	echo "$OUTPUT" | grep -q -P "^$shortdev(-[0-9]+)?\s+"
 	if [ $? -eq 0 ]; then
 		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
 	else
-		for i in `echo "$status" | awk '/Drive Model/{y=1;next}y' | awk -F '|' '{print $9}' | grep -v 'Unknown'`; do
-			check_disk $device megaraid $i
+		for i in `echo "$status" | awk '/Drive Model/{y=1;next}y' | tr -d ' ' | awk -F '|' '{print $1":"$9}' | grep -v 'Unknown'`; do
+			id=${i%%:*} # disc ID, ex. c0u2p7
+			lsi=${i##*:} # LSI ID of disc, ex. 25
+			dev=`echo "$status" | grep $device | awk -F '|' '{print $1}' | tr -d ' '` # ID of
+			if [[ $id =~ $dev ]]; then 
+				check_disk $device megaraid $lsi
+			fi
 		done
 	fi
 	#if this device is JBOD (not found in OUTPUT again)
-	echo "$OUTPUT" | grep -q -P "^$shortdev(-\\d+)?\s+"
+	echo "$OUTPUT" | grep -q -P "^$shortdev(-[0-9]+)?\s+"
 	if [ $? -eq 0 ] ; then
 		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
 	else
@@ -239,14 +244,20 @@ while IFS='#' read -d '#' -r i; do
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas (scsi)"
 			check_disk $device scsi
 			;;
+		*nvme*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is nvme (pcieport)"
+			check_disk ${device::-3} nvme # delete last two chars: nvme0n1 -> nvme0
+			;;
 		*usb-storage*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is usb-storage (skipping)"
 			# skipping - smart is not exists on this device
 			;;
 		*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is UNKNOWN"
-			echo "$device has unknown drivers: $drivers"
-			NAG_RETURN=4
+			if [ ! -z $drivers ] ; then
+				echo "$device has unknown drivers: '$drivers'"
+				NAG_RETURN=4
+			fi
 			;;
 	esac
 # output format: device_name1 : driver1[,driver2[,driver3[, ...]]] # [... : ... #]
@@ -260,7 +271,13 @@ done <<< `for i in \`lsblk -o KNAME,TYPE | grep disk | cut -d' ' -f 1\` ; do ech
 [ $DEBUG -ne 0 ] && echoerr "INFO LINE: $OUTPUT"
 [ $DEBUG -ne 0 ] && echoerr "PERFORMANCE: $PERFORMANCE"
 
-echo "$OUTPUT | $PERFORMANCE"
+if [ -t 1 ] ; then
+	OUTPUT_FMT="$OUTPUT"
+else
+	OUTPUT_FMT=`echo "$OUTPUT" | sed ':a;N;$!ba;s/\n/<br>/g'`
+fi
+
+echo "$OUTPUT_FMT | $PERFORMANCE"
 exit $NAG_RETURN
 
 
