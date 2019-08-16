@@ -53,16 +53,17 @@ parse_option() {
 	
 	for i in ${opt_o[*]}; do
 		#echo "DEBUG: $i - $device - $interface - $subdisk" >&2
-		#  d:device && (i:interface || i:interface,subdisk)
+		# d:device && (i:interface || i:interface,subdisk)
 		if [[ $i =~ "#d:${device}#" ]] && { [[ $i =~ "#i:${interface}#" ]] || [[ $i =~ "#i:${interface},${subdisk}#" ]] ; } ; then
 			smart_opts="${smart_opts} $(format_options ${i})"
 		fi
 		# d:device (not defined interface)
-		if [[ $i =~ "#d:${device}#" ]] && [[ ! $i =~ "#i:.*#" ]] ; then
+		if [[ $i =~ "#d:${device}#" ]] && [[ ! $i =~ "#i:".*"#" ]] ;  then
+		#	echo "DEBUG: add $(format_options ${i}) from $i (dev: $device)" >&2
 			smart_opts="${smart_opts} $(format_options ${i})"
 		fi
 		# i:interface (not defined device)
-		if [[ ! $i =~ "#d:.*#" ]] && { [[ $i =~ "#i:${interface}#" ]] || [[ $i =~ "#i:${interface},${subdisk}#" ]] ; } ; then
+		if [[ ! $i =~ "#d:".*"#" ]] && { [[ $i =~ "#i:${interface}#" ]] || [[ $i =~ "#i:${interface},${subdisk}#" ]] ; } ; then
 			smart_opts="${smart_opts} $(format_options ${i})"
 		fi
 	done
@@ -274,7 +275,8 @@ done <<< `for i in \`lsblk -o KNAME,TYPE | grep disk | cut -d' ' -f 1\` ; do ech
 if [ -t 1 ] ; then
 	OUTPUT_FMT="$OUTPUT"
 else
-	OUTPUT_FMT=`echo "$OUTPUT" | sed ':a;N;$!ba;s/\n/<br>/g'`
+	#OUTPUT_FMT=`echo "$OUTPUT" | sed ':a;N;$!ba;s/\n/<br>/g'`
+	OUTPUT_FMT="$OUTPUT"
 fi
 
 echo "$OUTPUT_FMT | $PERFORMANCE"
