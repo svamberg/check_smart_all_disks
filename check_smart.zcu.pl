@@ -30,6 +30,8 @@
 #       - add -p option as minimum of pending sectors 
 # 1.0.7 Jun 29, 2015: Michal Svamberg
 #       - add -f option to disable 'Disk may be close to failure' 
+# 1.0.8 Sep 06, 2018: Michal Svamberg
+#       - add NVMe interface 
 
 
 use strict;
@@ -110,7 +112,7 @@ if ($opt_d) {
 		exit $ERRORS{'UNKNOWN'};
 	}
 
-	if (-b $opt_d){
+	if (-b $opt_d || -c $opt_d){
 		$device = $opt_d;
 	}
 	else{
@@ -119,7 +121,7 @@ if ($opt_d) {
 		exit $ERRORS{'UNKNOWN'};
 	}
 
-	if(grep { $opt_i =~ /$_/ } ('ata','sat', 'scsi', 'megaraid,[0-9]+', 'sat+megaraid,[0-9]')){
+	if(grep { $opt_i =~ /$_/ } ('ata','sat', 'scsi', 'megaraid,[0-9]+', 'sat+megaraid,[0-9]', 'nvme')){
 		$interface = $opt_i;
 #                if($interface eq 'megaraid'){
 #                    if(defined($opt_n)){
@@ -379,15 +381,15 @@ exit $ERRORS{$exit_status};
 
 sub print_help {
 	print_revision($basename,$revision);
-	print "Usage:\n$basename --device=<device> --interface=(ata|sat|scsi|[sat+]megaraid,N) [--realloc=<num>] [--pending=<num>] [--checksum] [--log] [--failure] [--debug] [--version] [--help]\n\n";
+	print "Usage:\n$basename --device=<device> --interface=(ata|sat|scsi|[sat+]megaraid,N|nvme) [--realloc=<num>] [--pending=<num>] [--checksum] [--log] [--failure] [--debug] [--version] [--help]\n\n";
 	print "  -d/--device     a device to be SMART monitored, eg. /dev/sda\n";
-	print "  -i/--interface  ata, sat, scsi, megaraid, depending upon the device's interface type\n";
+	print "  -i/--interface  ata, sat, scsi, megaraid or nvme depending upon the device's interface type\n";
 #        print "  -n/--number     where in the argument megaraid, it is the physical disk number within the MegaRAID controller\n";
         print "  -r/--realloc    minimum of accepted reallocated sectors (actual value: $opt_realloc)\n";
         print "  -p/--pending    minimum of accepted pending sectors (actual value: $opt_pending)\n";
 	print "  -c/--checksum   disable checksum log structure (default: enable)\n";
 	print "  -l/--log        disable check of SMART logs (default: enable)\n";
-	print "  -f/--failure    disable warning when disk may be close to failure\n";
+	print "  -f/--failure    disable warning when disk may be close to failure)\n";
 	print "     --debug      show debugging information\n";
 	print "  -h/--help       this help\n";
 	print "  -v/--version    show version of this plugin\n";
