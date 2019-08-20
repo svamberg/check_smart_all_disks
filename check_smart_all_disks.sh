@@ -6,11 +6,13 @@
 
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
+SMARTCTL=/usr/sbin/smartctl
 #SMARTCHECK=./check_smart.zcu.pl
 DEBUG=0
 NAG_RETURN=0 # default OK
 OUTPUT=""
 PERFORMANCE=""
+SERIALS=() # list of serials number of disks which checked
 
 echoerr() { echo "$@" 1>&2; }
 
@@ -84,13 +86,28 @@ check_disk() {
 
 	if [ -z "$subdisk" ] ; then
 		shortdev=`awk -F '/' '{print $NF}' <<< $1`
+		serialcmd="$SMARTCTL -i -d $interface $device"
 		smartcmd="$SMARTCHECK -i $interface -d $device $args"
 	else
 		shortdev=`awk -F '/' '{print $NF"-'$subdisk'"}' <<< $1`
+		serialcmd="$SMARTCTL -i -d $interface,$subdisk $device" 
 		smartcmd="$SMARTCHECK -i $interface,$subdisk -d $device $args"
 	fi
 
-	[ $DEBUG -ne 0 ] && echoerr "DEBUG: run smart: $smartcmd"
+	# check if this disk checked or not
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: run serial: $serialcmd | grep -i 'Serial number' | awk -F ': +' '{print \$NF}'"
+	out=`$serialcmd | grep -i 'Serial number' | awk -F ': +' '{print \$NF}'`
+	if [[ " ${SERIALS[@]} " =~ " ${out} " ]] && [ -n "$out" ]; then
+		# this serial number of disk is found in list of serials of checked disks => skipping
+		[ $DEBUG -ne 0 ] && echoerr "DEBUG: this serial number $out founded in SERIALS => skipping check"
+		return
+	fi
+	# this disk will be checked, add serial number into list of checked disks
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: add serial number $out into SERIALS"
+	SERIALS+=("$out");
+
+	# start smart check 
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: run smart:  $smartcmd"
 	out=`$smartcmd`
 	ret=$?
 
@@ -141,6 +158,7 @@ device_megaraid() {
 			fi
 		done
 	fi
+
 	#if this device is JBOD (not found in OUTPUT again)
 	echo "$OUTPUT" | grep -q -P "^$shortdev(-[0-9]+)?\s+"
 	if [ $? -eq 0 ] ; then
