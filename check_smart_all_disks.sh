@@ -6,7 +6,7 @@
 
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
-SMARTCTL=/usr/sbin/smartctl
+SMARTCTL="/usr/bin/sudo /usr/sbin/smartctl"
 #SMARTCHECK=./check_smart.zcu.pl
 DEBUG=0
 NAG_RETURN=0 # default OK
