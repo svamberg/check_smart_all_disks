@@ -8,6 +8,7 @@
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
 SMARTCTL="/usr/bin/sudo /usr/sbin/smartctl"
 #SMARTCHECK=./check_smart.zcu.pl
+SKIPMODELS="^(DELLBOSS.*)$" # this will be called as: grep -qP '${SKIPMODELS}'
 DEBUG=0
 NAG_RETURN=0 # default OK
 OUTPUT=""
@@ -242,9 +243,17 @@ while IFS='#' read -d '#' -r i; do
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: input line: $i"
 	device=`awk -F ':' '{print $1}' <<< $i`
 	drivers=`awk -F ':' '{print $2}' <<< $i`
+	model=`udevadm info -a -n $device | grep 'ATTRS{model}' | awk -F'"' '{print $2}'`
 	
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: device: $device"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: drivers: $drivers"
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: model: $model"
+
+	if echo "$model" | grep -qP "${SKIPMODELS}"; then
+		[ $DEBUG -ne 0 ] && echoerr "DEBUG: this model '$model' on device '$device' was skipped because '\$SKIPMODELS=$SKIPMODELS'"
+		continue
+	fi
+
 	case "$drivers" in
 		*megaraid*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid (test all connected devices)"
@@ -324,7 +333,11 @@ else
 	OUTPUT_FMT="$OUTPUT"
 fi
 
-echo "$OUTPUT_FMT | $PERFORMANCE"
+if [ -z "$OUTPUT_FMR" ] ; then
+	echo "No devices found with S.M.A.R.T capability."
+else
+	echo "$OUTPUT_FMT | $PERFORMANCE"
+fi
 exit $NAG_RETURN
 
 
