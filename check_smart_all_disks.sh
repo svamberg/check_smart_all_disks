@@ -34,7 +34,7 @@ format_options() {
 				i_tr=$(echo "$i" | tr ':' ' ');
 				out="$out -$i_tr"
 				;;
-			[clf])
+			[clfs])
 				# formating options without arguments
 				out="$out -$i"
 				;;
@@ -108,6 +108,7 @@ check_disk() {
 
 	# start smart check 
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: run smart:  $smartcmd"
+	
 	out=`$smartcmd`
 	ret=$?
 
@@ -175,6 +176,27 @@ device_megaraid() {
 
 }
 
+
+# megaraid
+device_cciss() {
+	device=$1
+	shortdev=`awk -F '/' '{print $NF}' <<< $device`
+	serial=`lsblk --nodeps -o serial -n $device`
+	drives_num=`sudo /usr/bin/cciss_vol_status -V $device | grep 'Physical drives:' | awk -F': ' '{print $2}'`
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: serial on $device: $serial"
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: number of drives on $device: $drives_num"
+
+	# at first check megaraid devices
+	echo "$OUTPUT" | grep -q -P "^$shortdev(-[0-9]+)?\s+"
+	if [ $? -eq 0 ]; then
+		[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device checked before, skipping"
+	else
+		for i in `seq 0 $((drives_num-1))` ; do
+			check_disk $device cciss $i
+		done
+	fi
+}
+
 # usage
 usage() {
 	echo "$0 [-h] [-o 'device_options' [-o 'device_options']]"
@@ -182,7 +204,8 @@ usage() {
 	echo "  -o devices_option ... set specific device values"
 	echo "     devices_option = <opt_char>:<value>[#<opt_char>:<value>[#...]]"
 	echo "       opt_char: option from check_smart.zcu.pl"
-        echo "       value:    value for option from check_smart.zcu.pl"
+        echo "       value:    value for option from check_smart.zcu.pl,"
+	echo "             s - skip this device, unsupported SMART, aka BOSS CARD"
 	echo "Notes:"
 	echo "       Match options 'd' and 'i' control what disk mean for value settings."
         echo "       When using 'd:/dev/sda' (without 'i' option) then values matching to"
@@ -226,6 +249,10 @@ while IFS='#' read -d '#' -r i; do
 		*megaraid*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid (test all connected devices)"
 			device_megaraid $device
+			;;
+		*hpsa*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is hpsa (test all connected devices)"
+			device_cciss $device cciss
 			;;
 		*ahci*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci (sat)"

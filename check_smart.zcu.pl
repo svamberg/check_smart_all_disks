@@ -50,7 +50,7 @@ $ENV{'BASH_ENV'}='';
 $ENV{'ENV'}='';
 
 # global variables
-use vars qw($opt_d $opt_debug $opt_h $opt_i $opt_n $opt_v $opt_realloc $opt_pending $opt_checksum $opt_log $opt_failure);
+use vars qw($opt_d $opt_debug $opt_h $opt_i $opt_n $opt_v $opt_realloc $opt_pending $opt_checksum $opt_log $opt_failure $opt_skip);
 my $smart_command = '/usr/bin/sudo /usr/sbin/smartctl';
 my @error_messages = qw//;
 my $exit_status = 'OK';
@@ -71,6 +71,7 @@ GetOptions(
 	"c"   => \$opt_checksum, "checksum" => \$opt_checksum,
 	"f"   => \$opt_failure,  "failure" => \$opt_failure,
 	"l"   => \$opt_log, "log" => \$opt_log,
+        "s"   => \$opt_skip, "skip" => \$opt_skip,
 	"v"   => \$opt_v, "version"     => \$opt_v,
 );
 
@@ -86,6 +87,10 @@ if ($opt_h) {
 
 if ($opt_log) {
         push(@error_messages, 'Check of logs is disabled by -l option');
+}
+
+if ($opt_skip) {
+        push(@error_messages, 'Check is DISABLED, used -s (skip) option');
 }
 
 if ($opt_realloc) {
@@ -121,7 +126,7 @@ if ($opt_d) {
 		exit $ERRORS{'UNKNOWN'};
 	}
 
-	if(grep { $opt_i =~ /$_/ } ('ata','sat', 'scsi', 'megaraid,[0-9]+', 'sat+megaraid,[0-9]', 'nvme')){
+	if(grep { $opt_i =~ /$_/ } ('ata', 'sat', 'scsi', 'megaraid,[0-9]+', 'sat\+megaraid,[0-9]+', 'cciss,[0-9]+', 'nvme')){
 		$interface = $opt_i;
 #                if($interface eq 'megaraid'){
 #                    if(defined($opt_n)){
@@ -354,7 +359,13 @@ warn "(debug) final status/output:\n" if $opt_debug;
 my $status_string = '';
 
 if($exit_status ne 'OK'){
-	$status_string = "$exit_status: ".join(', ', @error_messages);
+	if ($opt_skip) {
+		$exit_status = 'OK';
+		$status_string = "$exit_status: Check is DISABLED by option -s (skip).";
+	}
+	else {
+		$status_string = "$exit_status: ".join(', ', @error_messages);
+	}
 }
 else {
 	$status_string = "OK: no SMART errors detected";
@@ -381,9 +392,9 @@ exit $ERRORS{$exit_status};
 
 sub print_help {
 	print_revision($basename,$revision);
-	print "Usage:\n$basename --device=<device> --interface=(ata|sat|scsi|[sat+]megaraid,N|nvme) [--realloc=<num>] [--pending=<num>] [--checksum] [--log] [--failure] [--debug] [--version] [--help]\n\n";
+	print "Usage:\n$basename --device=<device> --interface=(ata|sat|scsi|[sat+]megaraid,N|cciss,N|nvme) [--realloc=<num>] [--pending=<num>] [--checksum] [--log] [--failure] [--debug] [--version] [--help]\n\n";
 	print "  -d/--device     a device to be SMART monitored, eg. /dev/sda\n";
-	print "  -i/--interface  ata, sat, scsi, megaraid or nvme depending upon the device's interface type\n";
+	print "  -i/--interface  ata, sat, scsi, megaraid, cciss or nvme depending upon the device's interface type\n";
 #        print "  -n/--number     where in the argument megaraid, it is the physical disk number within the MegaRAID controller\n";
         print "  -r/--realloc    minimum of accepted reallocated sectors (actual value: $opt_realloc)\n";
         print "  -p/--pending    minimum of accepted pending sectors (actual value: $opt_pending)\n";
