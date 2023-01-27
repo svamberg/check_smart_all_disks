@@ -333,7 +333,7 @@ else
 	OUTPUT_FMT="$OUTPUT"
 fi
 
-if [ -z "$OUTPUT_FMR" ] ; then
+if [ -z "$OUTPUT_FMT" ] ; then
 	echo "No devices found with S.M.A.R.T capability."
 else
 	echo "$OUTPUT_FMT | $PERFORMANCE"
