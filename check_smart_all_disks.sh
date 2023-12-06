@@ -303,6 +303,10 @@ while IFS='#' read -d '#' -r i; do
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is nvme (pcieport)"
 			check_disk ${device::-3} nvme # delete last two chars: nvme0n1 -> nvme0
 			;;
+                *nd_pmem*)
+                        [ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is persistent memory like as Intel Optane (skipping)"
+                        # skipping - smart is not exists on this device
+                        ;;
 		*usb-storage*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is usb-storage (skipping)"
 			# skipping - smart is not exists on this device
