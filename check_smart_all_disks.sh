@@ -1,14 +1,17 @@
 #!/bin/bash
-
 #
 # https://github.com/svamberg/check_smart_all_disks
 #
-
+# 0.1.0: 23.11.2017, Michal Svamberg
+#      - add $SKIPVENDORS to skiping external storages
+# 0.0.1: 19.12.2023, Michal Svamberg 
+#      - initial version
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
 SMARTCTL="/usr/bin/sudo /usr/sbin/smartctl"
 #SMARTCHECK=./check_smart.zcu.pl
-SKIPMODELS="^(DELLBOSS.*)$" # this will be called as: grep -qP '${SKIPMODELS}'
+SKIPMODELS="^(DELLBOSS).*$" # this will be called as: grep -qP '${SKIPMODELS}'
+SKIPVENDORS="^(NETAPP|NEXSAN).*$" # this will be called as: grep -qP '${SKIPVENDORS}'
 DEBUG=0
 NAG_RETURN=0 # default OK
 OUTPUT=""
@@ -243,11 +246,18 @@ while IFS='#' read -d '#' -r i; do
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: input line: $i"
 	device=`awk -F ':' '{print $1}' <<< $i`
 	drivers=`awk -F ':' '{print $2}' <<< $i`
+	vendor=`udevadm info -a -n $device | grep 'ATTRS{vendor}' | awk -F'"' '{print $2}'`
 	model=`udevadm info -a -n $device | grep 'ATTRS{model}' | awk -F'"' '{print $2}'`
 	
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: device: $device"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: drivers: $drivers"
+	[ $DEBUG -ne 0 ] && echoerr "DEBUG: vendor: $vendor"
 	[ $DEBUG -ne 0 ] && echoerr "DEBUG: model: $model"
+
+	if echo "$vendor" | grep -qP "${SKIPVENDORS}"; then
+		[ $DEBUG -ne 0 ] && echoerr "DEBUG: this model '$vendor' on device '$device' was skipped because '\$SKIPVENDORS=$SKIPVENDORS'"
+		continue
+	fi
 
 	if echo "$model" | grep -qP "${SKIPMODELS}"; then
 		[ $DEBUG -ne 0 ] && echoerr "DEBUG: this model '$model' on device '$device' was skipped because '\$SKIPMODELS=$SKIPMODELS'"
@@ -255,59 +265,63 @@ while IFS='#' read -d '#' -r i; do
 	fi
 
 	case "$drivers" in
-		*megaraid*)
+		*megaraid,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid (test all connected devices)"
 			device_megaraid $device
 			;;
-		*hpsa*)
+		*megaraid_sas,*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is megaraid (test all connected devices)"
+			device_megaraid $device
+			;;
+		*hpsa,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is hpsa (test all connected devices)"
 			device_cciss $device cciss
 			;;
-		*ahci*)
+		*ahci,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ahci (sat)"
 			check_disk $device sat
 			;;
-		*aic7xxx*)
+		*aic7xxx,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is aic7xxx (scsi)"
 			check_disk $device scsi
 			;;
-		*ata_piix*)
+		*ata_piix,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is ata_piix (sat)"
 			check_disk $device sat
 			;;
-		*floppy*)
+		*floppy,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is floppy (skipping)"
 			# skipping - this device has not SMART
 			;;
-		*qla2xxx*)
+		*qla2xxx,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is fibrechannel (skipping)"
 			# skipping - smart is not exists on this device
 			;;
-		*mmcblk*)
+		*mmcblk,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mmcblk (skipping)"
 			# skipping - smart is not exists on this device
 			;;
-		*mptsas*)
+		*mptsas,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mptsas (scsi)"
 			check_disk $device scsi
 			;;
-		*mpt2sas*)
+		*mpt2sas,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt2sas (scsi)"
 			check_disk $device scsi
 			;;
-		*mpt3sas*)
+		*mpt3sas,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is mpt3sas (scsi)"
 			check_disk $device scsi
 			;;
-		*nvme*)
+		*nvme,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is nvme (pcieport)"
 			check_disk ${device::-3} nvme # delete last two chars: nvme0n1 -> nvme0
 			;;
-                *nd_pmem*)
-                        [ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is persistent memory like as Intel Optane (skipping)"
-                        # skipping - smart is not exists on this device
-                        ;;
-		*usb-storage*)
+		*nd_pmem,*)
+			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is persistent memory like as Intel Optane (skipping)"
+			# skipping - smart is not exists on this device
+			;;
+		*usb-storage,*)
 			[ $DEBUG -ne 0 ] && echoerr "DEBUG: $device is usb-storage (skipping)"
 			# skipping - smart is not exists on this device
 			;;
