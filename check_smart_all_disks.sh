@@ -2,9 +2,12 @@
 #
 # https://github.com/svamberg/check_smart_all_disks
 #
-# 0.1.0: 23.11.2017, Michal Svamberg
+# 0.1.0: 19.12.2023, github.com/Svamberg
 #      - add $SKIPVENDORS to skiping external storages
-# 0.0.1: 19.12.2023, Michal Svamberg 
+#      - add this Changelog
+# 0.0.2: 27.01.2023, github.com/Crayphish
+#      - Fix typo in var check
+# 0.0.1: 23.11.2017, github.com/Svamberg
 #      - initial version
 
 SMARTCHECK=/usr/local/lib/nagios/plugins/check_smart.zcu.pl
